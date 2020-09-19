@@ -23,7 +23,7 @@ class IExecutor(object):
     def get_exe_path(self, src):
         for ext in self.EXTS:
             if src.endswith(ext):
-                return self.src[:-len(ext)] + ".out"
+                return './' + src[:-len(ext)] + ".out"
         else:
             assert False
 
@@ -31,7 +31,7 @@ class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
     def compile(self, src):
         self.exe = self.get_exe_path(src)
-        os.system("g++ -g --std=c++11 %s -o %s" % (src, exe))
+        os.system("g++ -g --std=c++11 %s -o %s" % (src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py", ".py2"]
@@ -40,7 +40,7 @@ class PythonExecutor(IExecutor):
         self.exe = self.get_exe_path(src)
 
     def get_exe_path(self, src):
-        return ["python", src]
+        return ["python2", src]
 
 class Python3Executor(IExecutor):
     EXTS = [".py3"]
@@ -49,12 +49,12 @@ class Python3Executor(IExecutor):
         self.exe = self.get_exe_path(src)
 
     def get_exe_path(self, src):
-        return ["python", src]
+        return ["python3", src]
 
 class Parser(object):
-    START_TAG = "^^test^^"
-    END_TAG = "$$test$$"
-    TEST_DELIMETER = "---"
+    START_TAG = "^\^+test\^+$"
+    END_TAG = "^\$+test\$+$"
+    TEST_DELIMETER = "-+"
 
     STATUS_UNKNOWN = 0
     STATUS_INPUT = 1
@@ -69,15 +69,15 @@ class Parser(object):
         status = self.STATUS_UNKNOWN
         with open(src) as src_file:
             for line in src_file:
-                if line.strip().lower() == self.START_TAG:
+                if re.match(self.START_TAG, line.strip(), re.IGNORECASE):
                     assert status == self.STATUS_UNKNOWN
                     assert not current_input
                     assert not current_output
                     status = self.STATUS_INPUT
-                elif line.strip().lower() == self.TEST_DELIMETER:
+                elif re.match(self.TEST_DELIMETER, line.strip(), re.IGNORECASE):
                     if status == self.STATUS_INPUT:
                         status = self.STATUS_OUTPUT
-                elif line.strip().lower() == self.END_TAG:
+                elif re.match(self.END_TAG, line.strip(), re.IGNORECASE):
                     assert status == self.STATUS_OUTPUT
                     assert current_input
                     assert current_output
@@ -145,5 +145,9 @@ if __name__ == '__main__':
             print('Case %d: %s, time:%.2f(ms)' % (i, ColorText("passed", 'green'), t * 1000))
         else:
             print('Case %d: %s, time:%.2f(ms)' % (i, ColorText("failed", 'red'), t * 1000))
+            print('**Excepted**')
+            print(output_data)
+            print('**Actual**')
+            print(actual.decode())
 
 
