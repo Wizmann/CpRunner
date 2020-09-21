@@ -6,6 +6,7 @@ import sys
 import re
 import time
 import subprocess
+import resource
 
 class IExecutor(object):
     def compile(self, src):
@@ -13,12 +14,15 @@ class IExecutor(object):
 
     def run(self, input_data, output_data):
         t1 = time.time()
-        output = subprocess.check_output(self.exe, input=input_data.encode())
+        p = subprocess.Popen(self.exe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False)
+        output = p.communicate(input=input_data.decode())[0]
         t2 = time.time()
+        p.wait()
+        mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
         if output.strip() == output_data.strip().encode():
-            return True, output, t2 - t1
+            return True, output, t2 - t1, mem
         else:
-            return False, output, t2 - t1
+            return False, output, t2 - t1, mem
 
     def get_exe_path(self, src):
         for ext in self.EXTS:
@@ -140,11 +144,11 @@ if __name__ == '__main__':
 
     cases = Parser().parse(src)
     for i, (input_data, output_data) in enumerate(cases):
-        result, actual, t = cur_executor.run(input_data, output_data)
+        result, actual, t, mem = cur_executor.run(input_data, output_data)
         if result:
-            print('Case %d: %s, time:%.2f(ms)' % (i, ColorText("passed", 'green'), t * 1000))
+            print('Case %d: %s, time:%d(ms), mem:%.1f(MB)' % (i, ColorText("passed", 'green'), int(t * 1000), 1.0 * mem / 1024))
         else:
-            print('Case %d: %s, time:%.2f(ms)' % (i, ColorText("failed", 'red'), t * 1000))
+            print('Case %d: %s, time:%d(ms), mem:%.1f(MB)' % (i, ColorText("failed", 'red'), int(t * 1000), 1.0 * mem / 1024))
             print('**Excepted**')
             print(output_data)
             print('**Actual**')
