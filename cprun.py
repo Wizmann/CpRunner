@@ -38,22 +38,36 @@ class CppExecutor(IExecutor):
         os.system("g++ -g --std=c++11 %s -o %s" % (src, self.exe))
 
 class PythonExecutor(IExecutor):
-    EXTS = [".py", ".py2"]
+    EXTS = [".py"]
 
     def compile(self, src):
         self.exe = self.get_exe_path(src)
 
+    def get_version(self, src):
+        # detect which type of python we will use to run the code: python2, python3, pypy2, pypy3
+        DEFAULT = "python2" # LONG LIVE PYTHON2
+        mapping = {
+            "python": "python2",
+            "python2": "python2",
+            "python3": "python3",
+            "pypy": "pypy2",
+            "pypy2": "pypy2",
+            "pypy3": "pypy3"
+        }
+
+        with open(src) as f:
+            content = f.readlines()
+            for key, value in mapping.items():
+                pattern = '^\#\!.*?\/' + key + '$'
+                for line in content:
+                    if re.match(pattern, line, re.IGNORECASE):
+                        return value
+            else:
+                return DEFAULT
+
     def get_exe_path(self, src):
-        return ["python2", src]
-
-class Python3Executor(IExecutor):
-    EXTS = [".py3"]
-
-    def compile(self, src):
-        self.exe = self.get_exe_path(src)
-
-    def get_exe_path(self, src):
-        return ["python3", src]
+        version = self.get_version(src)
+        return [version, src]
 
 class Parser(object):
     START_TAG = "^\^+test\^+$"
@@ -126,7 +140,7 @@ class ColorText(object):
             return CBEIGE + CBOLD + self.text + CEND
 
 if __name__ == '__main__':
-    executors = [CppExecutor(), PythonExecutor(), Python3Executor()]
+    executors = [CppExecutor(), PythonExecutor()]
 
     src = sys.argv[1]
     ext = get_file_ext(src)
