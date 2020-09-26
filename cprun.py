@@ -8,21 +8,87 @@ import time
 import subprocess
 import resource
 
+TIMEOUT = 10 # seconds
+MAX_VIRTUAL_MEMORY = 1024 * 1024 * 1024
+MEMORY_LIMIT = 256 * 1024 # KB
+
+def limit_virtual_memory():
+    # The tuple below is of the form (soft limit, hard limit). Limit only
+    # the soft part so that the limit can be increased later (setting also
+    # the hard limit would prevent that).
+    # When the limit cannot be changed, setrlimit() raises ValueError.
+    resource.setrlimit(resource.RLIMIT_AS, (MAX_VIRTUAL_MEMORY, resource.RLIM_INFINITY))
+
+class ColorText(object):
+    def __init__(self, text, color):
+        self.text = text
+        self.color = color
+
+    def __str__(self):
+        CEND      = '\033[0m'
+        CBOLD     = '\033[1m'
+        CRED    = '\033[91m'
+        CGREEN  = '\033[32m'
+        CYELLOW = '\033[33m'
+        CBLUE   = '\033[34m'
+        CVIOLET = '\033[35m'
+        CBEIGE  = '\033[36m'
+        if self.color == 'red':
+            return CRED + CBOLD + self.text + CEND
+        elif self.color == 'green':
+            return CGREEN + CBOLD + self.text + CEND
+        elif self.color == 'yellow':
+            return CYELLOW + CBOLD + self.text + CEND
+        elif self.color == 'blue':
+            return CBLUE + CBOLD + self.text + CEND
+        elif self.color == 'violet':
+            return CVIOLET + CBOLD + self.text + CEND
+        elif self.color == 'beige':
+            return CBEIGE + CBOLD + self.text + CEND
+
+
+class ExecutorResult(object):
+    WRONG_ANSWER = ColorText("WA", 'red')
+    TIME_LIMIT_EXCEEDED = ColorText("TLE", 'violet')
+    ACCEPTED = ColorText("ACCPETED", 'green')
+    MEM_LIMIT_EXCEEDED = ColorText("MLE", 'violet')
+    RUNTIME_ERROR = ColorText("RE", 'red')
+
+    def __init__(self, result, output, time, mem):
+        self.result = result
+        self.output = output
+        self.time = time
+        self.mem = mem
+
+    def __str__(self):
+        return '%s, time:%d(ms), mem:%.1f(MB)' % (self.result, int(self.time * 1000), 1.0 * self.mem / 1024)
+
+    def get_output(self):
+        return self.output
+
 class IExecutor(object):
     def compile(self, src):
         pass
 
     def run(self, input_data, output_data):
         t1 = time.time()
-        p = subprocess.Popen(self.exe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False)
-        output = p.communicate(input=input_data.decode())[0]
+        p = subprocess.Popen(self.exe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False, preexec_fn=limit_virtual_memory)
+        try:
+            output = p.communicate(input=input_data.encode(), timeout=TIMEOUT)[0]
+        except subprocess.TimeoutExpired:
+            p.kill()
+            mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+            return ExecutorResult(ExecutorResult.TIME_LIMIT_EXCEEDED, '', TIMEOUT, mem)
         t2 = time.time()
-        p.wait()
         mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-        if output.strip() == output_data.strip().encode():
-            return True, output, t2 - t1, mem
+        if mem > MEMORY_LIMIT:
+            return ExecutorResult(ExecutorResult.MEM_LIMIT_EXCEEDED, '', t2 - t1, mem)
+        elif p.returncode != 0:
+            return ExecutorResult(ExecutorResult.RUNTIME_ERROR, '', t2 - t1, mem)
+        elif output.strip() == output_data.strip().encode():
+            return ExecutorResult(ExecutorResult.ACCEPTED, output, t2 - t1, mem)
         else:
-            return False, output, t2 - t1, mem
+            return ExecutorResult(ExecutorResult.WRONG_ANSWER, output, t2 - t1, mem)
 
     def get_exe_path(self, src):
         for ext in self.EXTS:
@@ -112,33 +178,6 @@ class Parser(object):
 def get_file_ext(src):
     return '.' + src.split('.')[-1]
 
-class ColorText(object):
-    def __init__(self, text, color):
-        self.text = text
-        self.color = color
-
-    def __str__(self):
-        CEND      = '\033[0m'
-        CBOLD     = '\033[1m'
-        CRED    = '\033[91m'
-        CGREEN  = '\033[32m'
-        CYELLOW = '\033[33m'
-        CBLUE   = '\033[34m'
-        CVIOLET = '\033[35m'
-        CBEIGE  = '\033[36m'
-        if self.color == 'red':
-            return CRED + CBOLD + self.text + CEND
-        elif self.color == 'green':
-            return CGREEN + CBOLD + self.text + CEND
-        elif self.color == 'yellow':
-            return CYELLOW + CBOLD + self.text + CEND
-        elif self.color == 'blue':
-            return CBLUE + CBOLD + self.text + CEND
-        elif self.color == 'voilet':
-            return CVIOLET + CBOLD + self.text + CEND
-        elif self.color == 'beige':
-            return CBEIGE + CBOLD + self.text + CEND
-
 if __name__ == '__main__':
     executors = [CppExecutor(), PythonExecutor()]
 
@@ -158,14 +197,12 @@ if __name__ == '__main__':
 
     cases = Parser().parse(src)
     for i, (input_data, output_data) in enumerate(cases):
-        result, actual, t, mem = cur_executor.run(input_data, output_data)
-        if result:
-            print('Case %d: %s, time:%d(ms), mem:%.1f(MB)' % (i, ColorText("passed", 'green'), int(t * 1000), 1.0 * mem / 1024))
-        else:
-            print('Case %d: %s, time:%d(ms), mem:%.1f(MB)' % (i, ColorText("failed", 'red'), int(t * 1000), 1.0 * mem / 1024))
+        status = cur_executor.run(input_data, output_data)
+        print('Case %d: %s' % (i, status))
+        if status.result == ExecutorResult.WRONG_ANSWER:
             print('**Excepted**')
             print(output_data)
             print('**Actual**')
-            print(actual.decode())
+            print(status.get_output().decode())
 
 
