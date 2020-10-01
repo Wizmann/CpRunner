@@ -16,7 +16,7 @@ using namespace std;
 typedef long long llint;
 
 const int INF = 0x3f3f3f3f;
-const int INFLL = 0x3f3f3f3f3f3f3f3fLL;
+const llint INFLL = 0x3f3f3f3f3f3f3f3fLL;
 
 void print() { cout << "\n"; }
 
