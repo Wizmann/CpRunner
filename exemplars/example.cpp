@@ -31,8 +31,7 @@ int input(X& x, T&... args) {
     return input(args...) + 1;
 }
 
-int main()
-{
+int main() {
     int n;
     while (input(n)) {
         int a = -1;
