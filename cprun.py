@@ -138,7 +138,7 @@ class PythonExecutor(IExecutor):
 class Parser(object):
     START_TAG = "^\^+test\^+$"
     END_TAG = "^\$+test\$+$"
-    TEST_DELIMETER = "-+"
+    TEST_DELIMETER = "---+"
 
     STATUS_UNKNOWN = 0
     STATUS_INPUT = 1
