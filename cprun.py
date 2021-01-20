@@ -116,8 +116,8 @@ class PythonExecutor(IExecutor):
             "python": "python2",
             "python2": "python2",
             "python3": "python3",
-            "pypy": "pypy2",
-            "pypy2": "pypy2",
+            "pypy": "pypy",
+            "pypy2": "pypy",
             "pypy3": "pypy3"
         }
 
@@ -184,6 +184,10 @@ if __name__ == '__main__':
     src = sys.argv[1]
     ext = get_file_ext(src)
 
+    idx = -1
+    if len(sys.argv) > 2:
+        idx = int(sys.argv[2])
+
     cur_executor = None
 
     for executor in executors:
@@ -197,6 +201,8 @@ if __name__ == '__main__':
 
     cases = Parser().parse(src)
     for i, (input_data, output_data) in enumerate(cases):
+        if idx != -1 and i != idx:
+            continue
         status = cur_executor.run(input_data, output_data)
         print('Case %d: %s' % (i, status))
         if status.result == ExecutorResult.WRONG_ANSWER:
