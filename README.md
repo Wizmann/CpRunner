@@ -31,6 +31,9 @@ $$$TEST$$$
 '''
 ```
 
+![image](https://user-images.githubusercontent.com/1270921/105690394-e6346c00-5f36-11eb-95b2-701724dd6709.png)
+
+
 Currently, CpRunner supports C++ and Python2/3. Adding new language support could be super easy.
 
 > Ocaml and F# will not be supported because some strange reasons. I mean it!
