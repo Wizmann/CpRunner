@@ -18,19 +18,6 @@ The syntax is simple, `^^^TEST^^^` is the beginning of one test case, and `$$$TE
 
 For example,
 
-```python
-a, b = map(int, raw_input().split())
-print a + b
-
-'''
-^^^TEST^^^
-1 2
----
-3
-$$$TEST$$$
-'''
-```
-
 ![image](https://user-images.githubusercontent.com/1270921/105690394-e6346c00-5f36-11eb-95b2-701724dd6709.png)
 
 
