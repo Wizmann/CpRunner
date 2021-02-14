@@ -85,7 +85,7 @@ class IExecutor(object):
             return ExecutorResult(ExecutorResult.MEM_LIMIT_EXCEEDED, '', t2 - t1, mem)
         elif p.returncode != 0:
             return ExecutorResult(ExecutorResult.RUNTIME_ERROR, '', t2 - t1, mem)
-        elif output.strip() == output_data.strip().encode():
+        elif self.check_output(output, output_data):
             return ExecutorResult(ExecutorResult.ACCEPTED, output, t2 - t1, mem)
         else:
             return ExecutorResult(ExecutorResult.WRONG_ANSWER, output, t2 - t1, mem)
@@ -96,6 +96,11 @@ class IExecutor(object):
                 return './' + src[:-len(ext)] + ".out"
         else:
             assert False
+
+    def check_output(self, expected, actual):
+        actual = '\n'.join(map(lambda x: x.strip(), actual.strip().split('\n')))
+        expected = '\n'.join(map(lambda x: x.strip(), expected.decode().strip().split('\n')))
+        return expected.strip() == actual.strip()
 
 class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
