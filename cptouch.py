@@ -28,4 +28,5 @@ else:
     assert False
 
 example_file = os.path.join(exemplars_path, 'example.' + ext)
-shutil.copy(example_file, filename)
+if not os.path.exists(filename):
+    shutil.copy(example_file, filename)

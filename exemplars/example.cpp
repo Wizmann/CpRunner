@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <queue>
+#include <stack>
 #include <map>
 #include <set>
 #include <deque>
