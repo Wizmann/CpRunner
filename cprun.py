@@ -106,7 +106,7 @@ class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
     def compile(self, src):
         self.exe = self.get_exe_path(src)
-        os.system("g++ -g --std=c++11 %s -o %s" % (src, self.exe))
+        os.system("g++ -g --std=c++11 -D__CPRUN__ %s -o %s" % (src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
@@ -183,8 +183,25 @@ class Parser(object):
 def get_file_ext(src):
     return '.' + src.split('.')[-1]
 
+class ISanitizer(object):
+    def check(self, path):
+        pass
+
+class TodoChecker(ISanitizer):
+    def check(self, path):
+        with open(path) as source:
+            content = source.read()
+            if "todo" in content.lower():
+                print(ColorText("***WARNING***", 'red'))
+                print(ColorText("There is one ore more \"TODO\"(s) in the source code.", 'red'))
+
+            if "fixme" in content.lower():
+                print(ColorText("***WARNING***", 'red'))
+                print(ColorText("There is one ore more \"FIXME\"(s) in the source code.", 'red'))
+
 if __name__ == '__main__':
     executors = [CppExecutor(), PythonExecutor()]
+    sanitizers = [TodoChecker()]
 
     src = sys.argv[1]
     ext = get_file_ext(src)
@@ -216,4 +233,6 @@ if __name__ == '__main__':
             print('**Actual**')
             print(status.get_output().decode())
 
+    for sanitizer in sanitizers:
+        sanitizer.check(src)
 
