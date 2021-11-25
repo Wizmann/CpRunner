@@ -106,7 +106,7 @@ class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
     def compile(self, src):
         self.exe = self.get_exe_path(src)
-        os.system("g++ -g --std=c++11 -D__CPRUN__ %s -o %s" % (src, self.exe))
+        os.system("g++ -g -O0 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
@@ -139,6 +139,11 @@ class PythonExecutor(IExecutor):
     def get_exe_path(self, src):
         version = self.get_version(src)
         return [version, src]
+
+class A2BExecutor(IExecutor):
+    EXTS = [".a2b"]
+    def compile(self, src):
+        self.exe = ['A2B', src]
 
 class Parser(object):
     START_TAG = "^\^+test\^+$"
@@ -200,7 +205,7 @@ class TodoChecker(ISanitizer):
                 print(ColorText("There is one ore more \"FIXME\"(s) in the source code.", 'red'))
 
 if __name__ == '__main__':
-    executors = [CppExecutor(), PythonExecutor()]
+    executors = [CppExecutor(), PythonExecutor(), A2BExecutor()]
     sanitizers = [TodoChecker()]
 
     src = sys.argv[1]
