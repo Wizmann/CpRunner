@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import time
+import argparse
 import subprocess
 import resource
 
@@ -67,7 +68,7 @@ class ExecutorResult(object):
         return self.output
 
 class IExecutor(object):
-    def compile(self, src):
+    def compile(self, src, **kwargs):
         pass
 
     def run(self, input_data, output_data):
@@ -104,17 +105,21 @@ class IExecutor(object):
 
 class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
-    def compile(self, src):
+    def compile(self, src, **kwargs):
         self.exe = self.get_exe_path(src)
-        os.system("g++ -g -O0 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
+        if kwargs.get('fast', False):
+            os.system("g++ -g -O2 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
+        else:
+            os.system("g++ -g -O0 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
 
-    def compile(self, src):
-        self.exe = self.get_exe_path(src)
+    def compile(self, src, **kwargs):
+        use_pypy = kwargs.get('fast', False)
+        self.exe = self.get_exe_path(src, fast=use_pypy)
 
-    def get_version(self, src):
+    def get_version(self, src, fast):
         # detect which type of python we will use to run the code: python2, python3, pypy2, pypy3
         DEFAULT = "python2" # LONG LIVE PYTHON2
         mapping = {
@@ -126,23 +131,34 @@ class PythonExecutor(IExecutor):
             "pypy3": "pypy3"
         }
 
+        mapping_fast = {
+            "python": "pypy",
+            "python2": "pypy2",
+            "python3": "pypy3",
+            "pypy": "pypy",
+            "pypy2": "pypy",
+            "pypy3": "pypy3"
+        }
+
         with open(src) as f:
             content = f.readlines()
             for key, value in mapping.items():
                 pattern = '^\#\!.*?\/' + key + '$'
                 for line in content:
                     if re.match(pattern, line, re.IGNORECASE):
+                        if fast:
+                            value = mapping_fast[value]
                         return value
             else:
                 return DEFAULT
 
-    def get_exe_path(self, src):
-        version = self.get_version(src)
+    def get_exe_path(self, src, fast):
+        version = self.get_version(src, fast)
         return [version, src]
 
 class A2BExecutor(IExecutor):
     EXTS = [".a2b"]
-    def compile(self, src):
+    def compile(self, src, **kwargs):
         self.exe = ['A2B', src]
 
 class Parser(object):
@@ -205,15 +221,23 @@ class TodoChecker(ISanitizer):
                 print(ColorText("There is one ore more \"FIXME\"(s) in the source code.", 'red'))
 
 if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(description='Code runner for competitive programming')
+    argparser.add_argument('-f', '--fast', dest='fast', action='store_true')
+    argparser.add_argument('-t', '--test', dest='test', type=int)
+    argparser.add_argument('filename')
+
+    argparser.set_defaults(fast=False)
+    argparser.set_defaults(test=-1) # -1 means run all tests
+
+    args = argparser.parse_args()
+
     executors = [CppExecutor(), PythonExecutor(), A2BExecutor()]
     sanitizers = [TodoChecker()]
 
-    src = sys.argv[1]
+    src = args.filename
     ext = get_file_ext(src)
 
-    idx = -1
-    if len(sys.argv) > 2:
-        idx = int(sys.argv[2])
+    idx = args.test
 
     cur_executor = None
 
@@ -224,7 +248,7 @@ if __name__ == '__main__':
     else:
         print('No available executor for file: %s' % src)
 
-    cur_executor.compile(src)
+    cur_executor.compile(src, fast=args.fast)
 
     cases = Parser().parse(src)
     for i, (input_data, output_data) in enumerate(cases):
@@ -240,4 +264,3 @@ if __name__ == '__main__':
 
     for sanitizer in sanitizers:
         sanitizer.check(src)
-
