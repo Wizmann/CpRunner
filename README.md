@@ -14,7 +14,7 @@ CpRunner is a python script to help compile and run code with customized tests w
 
 You can add a multiple line comments to write all the test cases so that you can run multiple tests by a simple command and boost the correctness of your code.
 
-The syntax is simple, `^^^TEST^^^` is the beginning of one test case, and `$$$TEST$$$` is the end. Delimeter `---` is used to seperate the input and output string.
+The syntax is simple, `^^^TEST^^^` is the beginning of one test case, and `$$$TEST$$$` is the end. Delimeter `-----` (5 or more `-`s) is used to seperate the input and output string.
 
 For example,
 
