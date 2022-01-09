@@ -4,6 +4,7 @@
 import os
 import sys
 import re
+import json
 import time
 import argparse
 import subprocess
@@ -71,7 +72,10 @@ class IExecutor(object):
     def compile(self, src, **kwargs):
         pass
 
-    def run(self, input_data, output_data):
+    def prettify_output(self, output):
+        return output
+
+    def run(self, input_data, expected_data):
         t1 = time.time()
         p = subprocess.Popen(self.exe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False, preexec_fn=limit_virtual_memory)
         try:
@@ -86,10 +90,10 @@ class IExecutor(object):
             return ExecutorResult(ExecutorResult.MEM_LIMIT_EXCEEDED, '', t2 - t1, mem)
         elif p.returncode != 0:
             return ExecutorResult(ExecutorResult.RUNTIME_ERROR, '', t2 - t1, mem)
-        elif self.check_output(output, output_data):
+        elif self.check_output(expected_data, output):
             return ExecutorResult(ExecutorResult.ACCEPTED, output, t2 - t1, mem)
         else:
-            return ExecutorResult(ExecutorResult.WRONG_ANSWER, output, t2 - t1, mem)
+            return ExecutorResult(ExecutorResult.WRONG_ANSWER, self.prettify_output(output), t2 - t1, mem)
 
     def get_exe_path(self, src):
         for ext in self.EXTS:
@@ -99,8 +103,8 @@ class IExecutor(object):
             assert False
 
     def check_output(self, expected, actual):
-        actual = '\n'.join(map(lambda x: x.strip(), actual.strip().split('\n')))
-        expected = '\n'.join(map(lambda x: x.strip(), expected.decode().strip().split('\n')))
+        actual = '\n'.join(map(lambda x: x.strip(), actual.decode('utf-8').strip().split('\n')))
+        expected = '\n'.join(map(lambda x: x.strip(), expected.strip().split('\n')))
         return expected.strip() == actual.strip()
 
 class CppExecutor(IExecutor):
@@ -155,6 +159,32 @@ class PythonExecutor(IExecutor):
     def get_exe_path(self, src, fast):
         version = self.get_version(src, fast)
         return [version, src]
+
+class PythonExecutorForLeetcode(PythonExecutor):
+    def compile(self, src, **kwargs):
+        helper_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                'lchelper.py')
+        self.exe = self.get_exe_path(helper_path, fast=False)
+        self.exe.append(src)
+
+    def prettify_output(self, output):
+        d = json.loads(output)
+        res = ''
+        if d.get('stdout', ''):
+            res += '--- stdout ---\n'
+            res += d['stdout'].strip()
+            res += '\n--- output ---\n'
+        res += d['result']
+        return res
+
+    def unify_output(self, output):
+        return json.dumps(json.loads(output))
+
+    def check_output(self, expected, actual):
+        expected = self.unify_output(expected)
+        actual = json.loads(actual)
+        return expected.strip() == actual['result'].strip()
 
 class A2BExecutor(IExecutor):
     EXTS = [".a2b"]
@@ -223,10 +253,12 @@ class TodoChecker(ISanitizer):
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Code runner for competitive programming')
     argparser.add_argument('-f', '--fast', dest='fast', action='store_true')
+    argparser.add_argument('-lc', '--leetcode', dest='leetcode', action='store_true')
     argparser.add_argument('-t', '--test', dest='test', type=int)
     argparser.add_argument('filename')
 
     argparser.set_defaults(fast=False)
+    argparser.set_defaults(leetcode=False)
     argparser.set_defaults(test=-1) # -1 means run all tests
 
     args = argparser.parse_args()
@@ -242,6 +274,10 @@ if __name__ == '__main__':
     cur_executor = None
 
     for executor in executors:
+        if args.leetcode:
+            if ext == '.py':
+                cur_executor = PythonExecutorForLeetcode()
+                break
         if ext in executor.EXTS:
             cur_executor = executor
             break
@@ -260,7 +296,7 @@ if __name__ == '__main__':
             print('**Excepted**')
             print(output_data)
             print('**Actual**')
-            print(status.get_output().decode())
+            print(status.get_output())
 
     for sanitizer in sanitizers:
         sanitizer.check(src)
