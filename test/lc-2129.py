@@ -1,6 +1,7 @@
 class Solution(object):
     def capitalizeTitle(self, title):
         words = title.lower().split()
+        print 'foobarbaz'
         return ' '.join(
                 map(lambda word: word if len(word) <= 2 else word.title(),
                     words))
@@ -17,6 +18,12 @@ $$$TEST$$$
 "First leTTeR of EACH Word"
 -------
 "First Letter of Each Word"
+$$$TEST$$$
+
+^^^TEST^^^
+"WRONG CASE"
+-------
+"NOT CORRECT"
 $$$TEST$$$
 '''
 

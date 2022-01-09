@@ -5,6 +5,10 @@ import sys
 import inspect
 import json
 
+old_stdout = sys.stdout
+my_stdout = six.StringIO()
+sys.stdout = my_stdout
+
 filename = sys.argv[1]
 
 if six.PY3:
@@ -34,17 +38,14 @@ def parse_input(lines):
 
 lines = [line for line in sys.stdin]
 
-
-old_stdout = sys.stdout
-my_stdout = six.StringIO()
-sys.stdout = my_stdout
-
 res = getattr(S, entry)(*parse_input(lines))
+sys.stdout.flush()
 
+stdout = my_stdout.getvalue()
 sys.stdout = old_stdout
 
 print(json.dumps(
     {
         'result' : json.dumps(res),
-        'stdout' : my_stdout.getvalue()
+        'stdout' : stdout
     }))
