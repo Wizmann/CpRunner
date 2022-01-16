@@ -147,9 +147,9 @@ class PythonExecutor(IExecutor):
         with open(src) as f:
             content = f.readlines()
             for key, value in mapping.items():
-                pattern = '^\#\!.*?\/' + key + '$'
+                pattern = r'^\#\!.*?\/' + key + '$'
                 for line in content:
-                    if re.match(pattern, line, re.IGNORECASE):
+                    if re.match(pattern, line.strip(), re.IGNORECASE):
                         if fast:
                             value = mapping_fast[value]
                         return value
@@ -165,8 +165,12 @@ class PythonExecutorForLeetcode(PythonExecutor):
         helper_path = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 'lchelper.py')
-        self.exe = self.get_exe_path(helper_path, fast=False)
+        self.exe = self.get_exe_path(helper_path, src, fast=False)
         self.exe.append(src)
+
+    def get_exe_path(self, helper, src, fast):
+        version = self.get_version(src, fast)
+        return [version, helper]
 
     def prettify_output(self, output):
         d = json.loads(output)
