@@ -1,3 +1,6 @@
 #coding=utf-8
 
-print 'hello world'
+T = int(raw_input())
+
+for case_ in xrange(T):
+    print case_

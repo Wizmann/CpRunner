@@ -73,7 +73,7 @@ class IExecutor(object):
         pass
 
     def prettify_output(self, output):
-        return output
+        return output.decode()
 
     def run(self, input_data, expected_data):
         t1 = time.time()
