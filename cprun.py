@@ -114,7 +114,7 @@ class CppExecutor(IExecutor):
         if kwargs.get('fast', False):
             os.system("g++ -g -O2 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
         else:
-            os.system("g++ -g -O0 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
+            os.system("g++ -g -Wall -Werror -O0 -Wextra -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
