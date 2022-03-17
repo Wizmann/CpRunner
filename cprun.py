@@ -111,10 +111,11 @@ class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
     def compile(self, src, **kwargs):
         self.exe = self.get_exe_path(src)
+        self.std = kwargs.get('std', 'c++11')
         if kwargs.get('fast', False):
-            os.system("g++ -g -O2 -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
+            os.system("g++ -g -O2 -D__CPRUN__ --std=%s %s -o %s" % (self.std, src, self.exe))
         else:
-            os.system("g++ -g -Wall -Werror -O0 -Wextra -D__CPRUN__ --std=c++11 %s -o %s" % (src, self.exe))
+            os.system("g++ -g -Wall -Werror -O0 -Wextra -D__CPRUN__ --std=%s %s -o %s" % (self.std, src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
@@ -259,11 +260,13 @@ if __name__ == '__main__':
     argparser.add_argument('-f', '--fast', dest='fast', action='store_true')
     argparser.add_argument('-lc', '--leetcode', dest='leetcode', action='store_true')
     argparser.add_argument('-t', '--test', dest='test', type=int)
+    argparser.add_argument('-std', '--std', dest='std', type=str)
     argparser.add_argument('filename')
 
     argparser.set_defaults(fast=False)
     argparser.set_defaults(leetcode=False)
     argparser.set_defaults(test=-1) # -1 means run all tests
+    argparser.set_defaults(std='c++11')
 
     args = argparser.parse_args()
 
@@ -288,7 +291,7 @@ if __name__ == '__main__':
     else:
         print('No available executor for file: %s' % src)
 
-    cur_executor.compile(src, fast=args.fast)
+    cur_executor.compile(src, fast=args.fast, std=args.std)
 
     cases = Parser().parse(src)
     for i, (input_data, output_data) in enumerate(cases):
