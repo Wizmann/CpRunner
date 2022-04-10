@@ -111,11 +111,14 @@ class CppExecutor(IExecutor):
     EXTS = [".cc", ".cpp", ".cxx"]
     def compile(self, src, **kwargs):
         self.exe = self.get_exe_path(src)
+
         self.std = kwargs.get('std', 'c++11')
+        debug = '-D__CPRUN__' if kwargs.get('debug', False) else ''
+
         if kwargs.get('fast', False):
-            os.system("g++ -g -O2 -D__CPRUN__ --std=%s %s -o %s" % (self.std, src, self.exe))
+            os.system("g++ -g -O2 %s --std=%s %s -o %s" % (debug, self.std, src, self.exe))
         else:
-            os.system("g++ -g -Wall -Werror -O0 -Wextra -D__CPRUN__ --std=%s %s -o %s" % (self.std, src, self.exe))
+            os.system("g++ -g -Wall -Werror -O0 -Wextra %s --std=%s %s -o %s" % (debug, self.std, src, self.exe))
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
@@ -129,7 +132,9 @@ class PythonExecutor(IExecutor):
         DEFAULT = "python2" # LONG LIVE PYTHON2
         mapping = {
             "python": "python2",
+            "py2": "python2",
             "python2": "python2",
+            "py3": "python3",
             "python3": "python3",
             "pypy": "pypy",
             "pypy2": "pypy",
@@ -138,8 +143,10 @@ class PythonExecutor(IExecutor):
 
         mapping_fast = {
             "python": "pypy",
-            "python2": "pypy2",
+            "python2": "pypy",
             "python3": "pypy3",
+            "py2": "pypy2",
+            "py3": "pypy3",
             "pypy": "pypy",
             "pypy2": "pypy",
             "pypy3": "pypy3"
@@ -148,7 +155,7 @@ class PythonExecutor(IExecutor):
         with open(src) as f:
             content = f.readlines()
             for key, value in mapping.items():
-                pattern = r'^\#\!.*?\/' + key + '$'
+                pattern = r'^\#.*?' + key + '$'
                 for line in content:
                     if re.match(pattern, line.strip(), re.IGNORECASE):
                         if fast:
@@ -258,6 +265,7 @@ class TodoChecker(ISanitizer):
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Code runner for competitive programming')
     argparser.add_argument('-f', '--fast', dest='fast', action='store_true')
+    argparser.add_argument('-d', '--debug', dest='debug', action='store_true')
     argparser.add_argument('-lc', '--leetcode', dest='leetcode', action='store_true')
     argparser.add_argument('-t', '--test', dest='test', type=int)
     argparser.add_argument('-std', '--std', dest='std', type=str)
@@ -265,6 +273,7 @@ if __name__ == '__main__':
 
     argparser.set_defaults(fast=False)
     argparser.set_defaults(leetcode=False)
+    argparser.set_defaults(debug=False)
     argparser.set_defaults(test=-1) # -1 means run all tests
     argparser.set_defaults(std='c++11')
 
@@ -291,7 +300,7 @@ if __name__ == '__main__':
     else:
         print('No available executor for file: %s' % src)
 
-    cur_executor.compile(src, fast=args.fast, std=args.std)
+    cur_executor.compile(src, fast=args.fast, std=args.std, debug=args.debug)
 
     cases = Parser().parse(src)
     for i, (input_data, output_data) in enumerate(cases):
