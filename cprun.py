@@ -12,7 +12,7 @@ import resource
 
 TIMEOUT = 10 # seconds
 MAX_VIRTUAL_MEMORY = 1024 * 1024 * 1024
-MEMORY_LIMIT = 256 * 1024 # KB
+MEMORY_LIMIT = 1024 * 1024 
 
 def limit_virtual_memory():
     # The tuple below is of the form (soft limit, hard limit). Limit only
@@ -94,6 +94,9 @@ class IExecutor(object):
             return ExecutorResult(ExecutorResult.ACCEPTED, output, t2 - t1, mem)
         else:
             return ExecutorResult(ExecutorResult.WRONG_ANSWER, self.prettify_output(output), t2 - t1, mem)
+
+    def run_without_test(self):
+        os.execv(self.exe, [' '])
 
     def get_exe_path(self, src):
         for ext in self.EXTS:
@@ -266,11 +269,13 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Code runner for competitive programming')
     argparser.add_argument('-f', '--fast', dest='fast', action='store_true')
     argparser.add_argument('-d', '--debug', dest='debug', action='store_true')
+    argparser.add_argument('-r', '--run', dest='run', action='store_true')
     argparser.add_argument('-lc', '--leetcode', dest='leetcode', action='store_true')
     argparser.add_argument('-t', '--test', dest='test', type=int)
     argparser.add_argument('-std', '--std', dest='std', type=str)
     argparser.add_argument('filename')
 
+    argparser.set_defaults(run=False)
     argparser.set_defaults(fast=False)
     argparser.set_defaults(leetcode=False)
     argparser.set_defaults(debug=False)
@@ -302,17 +307,20 @@ if __name__ == '__main__':
 
     cur_executor.compile(src, fast=args.fast, std=args.std, debug=args.debug)
 
-    cases = Parser().parse(src)
-    for i, (input_data, output_data) in enumerate(cases):
-        if idx != -1 and i != idx:
-            continue
-        status = cur_executor.run(input_data, output_data)
-        print('Case %d: %s' % (i, status))
-        if status.result == ExecutorResult.WRONG_ANSWER:
-            print('**Excepted**')
-            print(output_data)
-            print('**Actual**')
-            print(status.get_output())
+    if args.run:
+        cur_executor.run_without_test()
+    else:
+        cases = Parser().parse(src)
+        for i, (input_data, output_data) in enumerate(cases):
+            if idx != -1 and i != idx:
+                continue
+            status = cur_executor.run(input_data, output_data)
+            print('Case %d: %s' % (i, status))
+            if status.result == ExecutorResult.WRONG_ANSWER:
+                print('**Excepted**')
+                print(output_data)
+                print('**Actual**')
+                print(status.get_output())
 
-    for sanitizer in sanitizers:
-        sanitizer.check(src)
+        for sanitizer in sanitizers:
+            sanitizer.check(src)
