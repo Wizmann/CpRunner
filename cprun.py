@@ -7,6 +7,7 @@ import re
 import json
 import time
 import argparse
+import tempfile
 import subprocess
 import resource
 
@@ -89,7 +90,7 @@ class IExecutor(object):
         if mem > MEMORY_LIMIT:
             return ExecutorResult(ExecutorResult.MEM_LIMIT_EXCEEDED, '', t2 - t1, mem)
         elif p.returncode != 0:
-            return ExecutorResult(ExecutorResult.RUNTIME_ERROR, '', t2 - t1, mem)
+            return ExecutorResult(ExecutorResult.RUNTIME_ERROR, self.prettify_output(output), t2 - t1, mem)
         elif self.check_output(expected_data, output):
             return ExecutorResult(ExecutorResult.ACCEPTED, output, t2 - t1, mem)
         else:
@@ -97,6 +98,9 @@ class IExecutor(object):
 
     def run_without_test(self):
         os.execv(self.exe, [' '])
+
+    def run_gdb(self, case):
+        assert False
 
     def get_exe_path(self, src):
         for ext in self.EXTS:
@@ -122,6 +126,18 @@ class CppExecutor(IExecutor):
             os.system("g++ -g -O2 %s --std=%s %s -o %s" % (debug, self.std, src, self.exe))
         else:
             os.system("g++ -g -Wall -Werror -O0 -Wextra %s --std=%s %s -o %s" % (debug, self.std, src, self.exe))
+
+    def run_gdb(self, case):
+        gdb_path = '/usr/bin/gdb'
+        if not case:
+            os.execv(gdb_path, [gdb_path, self.exe,])
+        else:
+            with tempfile.NamedTemporaryFile(mode='w', delete=False) as tf:
+                case_input, _ = case
+                tf.write(case_input)
+            os.execv(gdb_path,
+                [gdb_path, '-ex', 'set args < %s' % tf.name, self.exe])
+
 
 class PythonExecutor(IExecutor):
     EXTS = [".py"]
@@ -271,6 +287,7 @@ if __name__ == '__main__':
     argparser.add_argument('-d', '--debug', dest='debug', action='store_true')
     argparser.add_argument('-r', '--run', dest='run', action='store_true')
     argparser.add_argument('-lc', '--leetcode', dest='leetcode', action='store_true')
+    argparser.add_argument('-g', '--gdb', dest='gdb', action='store_true')
     argparser.add_argument('-t', '--test', dest='test', type=int)
     argparser.add_argument('-std', '--std', dest='std', type=str)
     argparser.add_argument('filename')
@@ -279,6 +296,7 @@ if __name__ == '__main__':
     argparser.set_defaults(fast=False)
     argparser.set_defaults(leetcode=False)
     argparser.set_defaults(debug=False)
+    argparser.set_defaults(gdb=False)
     argparser.set_defaults(test=-1) # -1 means run all tests
     argparser.set_defaults(std='c++11')
 
@@ -309,6 +327,12 @@ if __name__ == '__main__':
 
     if args.run:
         cur_executor.run_without_test()
+    elif args.gdb:
+        if idx == -1:
+            cur_executor.run_gdb(None)
+        else:
+            cases = Parser().parse(src)
+            cur_executor.run_gdb(cases[idx])
     else:
         cases = Parser().parse(src)
         for i, (input_data, output_data) in enumerate(cases):
