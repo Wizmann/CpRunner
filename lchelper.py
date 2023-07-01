@@ -1,9 +1,10 @@
 #coding=utf-8
 
-import six
 import sys
+import six
 import inspect
 import json
+import traceback
 
 if six.PY3:
     from typing import *
@@ -19,9 +20,9 @@ with open(filename) as solution_file:
     exec(solution_code)
 
 S = Solution()
-entry = sorted(
-    inspect.getmembers(S, predicate=inspect.ismethod),
-    key=lambda p: p[1].__code__.co_firstlineno)[0][0]
+entry = sorted(inspect.getmembers(S, predicate=inspect.ismethod),
+               key=lambda p: p[1].__code__.co_firstlineno)[0][0]
+
 
 def parse_input(lines):
     args = []
@@ -30,16 +31,26 @@ def parse_input(lines):
         args.append(arg)
     return args
 
+
 lines = [line for line in sys.stdin]
 
-res = getattr(S, entry)(*parse_input(lines))
+flag_re = False
+
+try:
+    res = getattr(S, entry)(*parse_input(lines))
+except Exception as e:
+    six.print_(traceback.format_exc())
+    six.print_(e, file=sys.stderr)
+    res = ''
+    flag_re = True
+
 sys.stdout.flush()
+sys.stderr.flush()
 
 stdout = my_stdout.getvalue()
 sys.stdout = old_stdout
 
-print(json.dumps(
-    {
-        'result' : json.dumps(res),
-        'stdout' : stdout
-    }))
+print(json.dumps({'result': json.dumps(res), 'stdout': stdout}))
+
+if flag_re:
+    exit(-1)

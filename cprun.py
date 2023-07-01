@@ -78,9 +78,11 @@ class IExecutor(object):
 
     def run(self, input_data, expected_data):
         t1 = time.time()
-        p = subprocess.Popen(self.exe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False, preexec_fn=limit_virtual_memory)
+        p = subprocess.Popen(self.exe,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                shell=False, preexec_fn=limit_virtual_memory)
         try:
-            output = p.communicate(input=input_data.encode(), timeout=TIMEOUT)[0]
+            output, err = p.communicate(input=input_data.encode(), timeout=TIMEOUT)
         except subprocess.TimeoutExpired:
             p.kill()
             mem = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
@@ -112,6 +114,8 @@ class IExecutor(object):
     def check_output(self, expected, actual):
         actual = '\n'.join(map(lambda x: x.strip(), actual.decode('utf-8').strip().split('\n')))
         expected = '\n'.join(map(lambda x: x.strip(), expected.strip().split('\n')))
+        if expected == '<ignore>':
+            return True
         return expected.strip() == actual.strip()
 
 class CppExecutor(IExecutor):
@@ -206,7 +210,7 @@ class PythonExecutorForLeetcode(PythonExecutor):
             res += '--- stdout ---\n'
             res += d['stdout'].strip()
             res += '\n--- output ---\n'
-        res += d['result']
+        res += d.get('result', '')
         return res
 
     def unify_output(self, output):
