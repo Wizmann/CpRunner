@@ -27,6 +27,7 @@ if __name__ == '__main__':
             with open('check.err', 'wb+') as f:
                 f.write(data)
             print('ERROR')
+            print(data.decode('utf-8'))
             raise
     else:
         print('OK')

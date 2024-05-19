@@ -73,7 +73,7 @@ class IExecutor(object):
     def compile(self, src, **kwargs):
         pass
 
-    def prettify_output(self, output):
+    def prettify_output(self, output, err=''):
         return output.decode()
 
     def run(self, input_data, expected_data):
@@ -92,11 +92,11 @@ class IExecutor(object):
         if mem > MEMORY_LIMIT:
             return ExecutorResult(ExecutorResult.MEM_LIMIT_EXCEEDED, '', t2 - t1, mem)
         elif p.returncode != 0:
-            return ExecutorResult(ExecutorResult.RUNTIME_ERROR, self.prettify_output(output), t2 - t1, mem)
+            return ExecutorResult(ExecutorResult.RUNTIME_ERROR, self.prettify_output(output, err), t2 - t1, mem)
         elif self.check_output(expected_data, output):
             return ExecutorResult(ExecutorResult.ACCEPTED, output, t2 - t1, mem)
         else:
-            return ExecutorResult(ExecutorResult.WRONG_ANSWER, self.prettify_output(output), t2 - t1, mem)
+            return ExecutorResult(ExecutorResult.WRONG_ANSWER, self.prettify_output(output, err), t2 - t1, mem)
 
     def run_without_test(self):
         os.execv(self.exe, [' '])
@@ -203,13 +203,22 @@ class PythonExecutorForLeetcode(PythonExecutor):
         version = self.get_version(src, fast)
         return [version, helper]
 
-    def prettify_output(self, output):
-        d = json.loads(output)
+    def prettify_output(self, output, err=''):
+        d = {}
+        if output:
+            d = json.loads(output)
+        else:
+            d['stderr'] = err.decode('utf-8')
         res = ''
-        if d.get('stdout', ''):
+
+        if d.get('stderr', ''):
+            res += '--- stderr ---\n'
+            res += d.get('stderr', '').strip()
+            res += '\n--- stderr ---\n'
+        elif d.get('stdout', ''):
             res += '--- stdout ---\n'
-            res += d['stdout'].strip()
-            res += '\n--- output ---\n'
+            res += d.get('stdout', '').strip()
+            res += '\n--- stdout ---\n'
         res += d.get('result', '')
         return res
 
@@ -348,6 +357,9 @@ if __name__ == '__main__':
                 print('**Excepted**')
                 print(output_data)
                 print('**Actual**')
+                print(status.get_output())
+            elif status.result == ExecutorResult.RUNTIME_ERROR:
+                print('**Runtime error**')
                 print(status.get_output())
 
         for sanitizer in sanitizers:
