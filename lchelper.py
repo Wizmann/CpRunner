@@ -20,8 +20,10 @@ with open(filename) as solution_file:
     exec(solution_code)
 
 S = Solution()
-entry = sorted(inspect.getmembers(S, predicate=inspect.ismethod),
-               key=lambda p: p[1].__code__.co_firstlineno)[0][0]
+entry = sorted(
+            filter(lambda x: not x[0].startswith('_'),
+                inspect.getmembers(S, predicate=inspect.ismethod)),
+            key=lambda p: p[1].__code__.co_firstlineno)[0][0]
 
 
 def parse_input(lines):

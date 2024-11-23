@@ -74,7 +74,7 @@ class IExecutor(object):
         pass
 
     def prettify_output(self, output, err=''):
-        return output.decode()
+        return output.decode() + ('\n--- error ---\n' + err.decode() if err else '')
 
     def run(self, input_data, expected_data):
         t1 = time.time()
@@ -114,7 +114,7 @@ class IExecutor(object):
     def check_output(self, expected, actual):
         actual = '\n'.join(map(lambda x: x.strip(), actual.decode('utf-8').strip().split('\n')))
         expected = '\n'.join(map(lambda x: x.strip(), expected.strip().split('\n')))
-        if expected == '<ignore>':
+        if expected == '<ignore>' or expected == '<spj>':
             return True
         return expected.strip() == actual.strip()
 
@@ -214,11 +214,12 @@ class PythonExecutorForLeetcode(PythonExecutor):
         if d.get('stderr', ''):
             res += '--- stderr ---\n'
             res += d.get('stderr', '').strip()
-            res += '\n--- stderr ---\n'
         elif d.get('stdout', ''):
             res += '--- stdout ---\n'
             res += d.get('stdout', '').strip()
-            res += '\n--- stdout ---\n'
+
+        if d.get('stdout', '') or d.get('stderr', ''):
+            res += '\n--- output ---\n'
         res += d.get('result', '')
         return res
 
