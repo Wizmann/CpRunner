@@ -11,6 +11,7 @@ exemplars_path = os.path.join(
 exts = [
     (['cc', 'cpp', 'cxx'], 'cpp'),
     (['py'], 'py'),
+    (['rs'], 'rs'),
 ]
 
 d = {}

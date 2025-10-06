@@ -191,6 +191,17 @@ class PythonExecutor(IExecutor):
         version = self.get_version(src, fast)
         return [version, src]
 
+class RustExecutor(IExecutor):
+    EXTS = [".rs"]
+
+    def compile(self, src, **kwargs):
+        self.exe = self.get_exe_path(src)
+
+        if kwargs.get('fast', False):
+            os.system("rustc -C opt-level=2 %s -o %s" % (src, self.exe))
+        else:
+            os.system("rustc -g %s -o %s" % (src, self.exe))
+
 class PythonExecutorForLeetcode(PythonExecutor):
     def compile(self, src, **kwargs):
         helper_path = os.path.join(
@@ -316,7 +327,7 @@ if __name__ == '__main__':
 
     args = argparser.parse_args()
 
-    executors = [CppExecutor(), PythonExecutor(), A2BExecutor()]
+    executors = [CppExecutor(), PythonExecutor(), A2BExecutor(), RustExecutor()]
     sanitizers = [TodoChecker()]
 
     src = args.filename
