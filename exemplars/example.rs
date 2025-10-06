@@ -45,6 +45,8 @@ macro_rules! read_vec {
         v
     }};
 }
+
+#[allow(unused_macros)]
 macro_rules! puts {
     ($($arg:tt)*) => {{
         let mut out = std::io::BufWriter::new(std::io::stdout());
